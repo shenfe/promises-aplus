@@ -9,75 +9,85 @@ var asyncRun = function (fn, data) {
 
 var isFn = function (fn) { return typeof fn === 'function' };
 
-var Prom = function (executor) {
+var Prom = function () {
     this.status = 0; // 0: pending, 1: resolved, 2: rejected
     this.data = undefined;
-
-    this.handlers = [];
-
-    isFn(executor) && executor(this.resolve, this.reject);
 };
 
 Prom.prototype.settle = function (code, data) {
-    if (this.status !== 0) return;
+    if (this.status !== 0) return false;
     this.status = code;
     this.data = data;
-    var _this = this;
-    asyncRun(function () {
-        var data = _this.data;
-        while (_this.handlers.length) {
-            var handler = _this.handlers.shift();
-            var resolver = handler.resolver;
-            var rejecter = handler.rejecter;
-            if (data instanceof Prom) {
-                if (code === 1)
-                    data = data.then(handler.resolver, handler.rejecter);
-                else
-                    data = data.catch(handler.rejecter);
-            } else {
-                if (code === 1) {
-                    // try {
-                        data = resolver(data);
-                    // } catch (e) {
-                        // code = 2;
-                        // data = rejecter(e);
-                    // }
-                } else {
-                    // try {
-                        data = rejecter(data);
-                    // } catch (e) {
-                        // data = rejecter(e);
-                    // }
-                }
-            }
-        }
-    });
+    return true;
 };
 
 Prom.prototype.resolve = function (value) {
-    this.settle(1, value);
+    if (!this.settle(1, value)) return;
+    var _this = this;
+    asyncRun(function () {
+        isFn(_this._resolver) && _this._resolver.call(undefined, _this.data);
+    });
+    return this;
 };
 
 Prom.prototype.reject = function (reason) {
-    this.settle(2, reason);
+    if (!this.settle(2, reason)) return;
+    var _this = this;
+    asyncRun(function () {
+        isFn(_this._rejecter) && _this._rejecter.call(undefined, _this.data);
+    });
+    return this;
 };
 
 Prom.prototype.then = function (resolver, rejecter) {
     var _this = this;
     if (this.status === 1) {
-        var data = isFn(resolver) ? resolver(this.data) : this.data;
-        if (data instanceof Prom) return data;
-        return Prom.resolve(data);
-    } else if (this.status === 2) {
-        var data = isFn(rejecter) ? rejecter(this.data) : this.data;
-        if (data instanceof Prom) return data;
-        return Prom.reject(data);
-    } else {
-        this.handlers.push({
-            resolver,
-            rejecter
+        var p = new Prom();
+        if (!isFn(resolver)) return p.resolve(this.data);
+        asyncRun(function () {
+            try {
+                var data = resolver(_this.data);
+                p.resolve(data);
+            } catch (e) {
+                p.reject(e);
+            }
         });
-        return this;
+        return p;
+    } else if (this.status === 2) {
+        var p = new Prom();
+        if (!isFn(rejecter)) return p.reject(this.data);
+        asyncRun(function () {
+            try {
+                var data = rejecter(_this.data);
+                p.reject(data);
+            } catch (e) {
+                p.reject(e);
+            }
+        });
+        return p;
+    } else {
+        var p = new Prom();
+        var _resolver = this._resolver;
+        var _rejecter = this._rejecter;
+        this._resolver = function (value) {
+            _resolver && _resolver(value);
+            try {
+                var data = isFn(resolver) ? resolver(value) : value;
+                p.resolve(data);
+            } catch (e) {
+                p.reject(e);
+            }
+        };
+        this._rejecter = function (reason) {
+            _rejecter && _rejecter(reason);
+            try {
+                var data = isFn(rejecter) ? rejecter(reason) : reason;
+                p.reject(data);
+            } catch (e) {
+                p.reject(e);
+            }
+        };
+        return p;
     }
 };
 
