@@ -76,26 +76,6 @@ var Prom = function (fn) {
     }
 };
 
-Prom.prototype.then = function (onFulfilled, onRejected) {
-    var p = new Prom();
-    p._resolve = Utils.isFunction(onFulfilled) && onFulfilled;
-    p._reject = Utils.isFunction(onRejected) && onRejected;
-    this.queue.push(p);
-
-    var _this = this;
-    if (this.state !== 0) Utils.runAsync(function () { _this.process() });
-
-    return p;
-};
-
-Prom.prototype.settle = function (state, value) {
-    if (this.state !== 0 || state === 0) return;
-    this.state = state;
-    this.value = value;
-    var _this = this;
-    Utils.runAsync(function () { _this.process() });
-};
-
 Prom.prototype.process = function (p, value) {
     while (p = this.queue.shift()) {
         value = this.value;
@@ -121,6 +101,26 @@ Prom.prototype.process = function (p, value) {
 
         Resolve(p, value);
     }
+};
+
+Prom.prototype.then = function (onFulfilled, onRejected) {
+    var p = new Prom();
+    p._resolve = Utils.isFunction(onFulfilled) && onFulfilled;
+    p._reject = Utils.isFunction(onRejected) && onRejected;
+    this.queue.push(p);
+
+    var _this = this;
+    if (this.state !== 0) Utils.runAsync(function () { _this.process() });
+
+    return p;
+};
+
+Prom.prototype.settle = function (state, value) {
+    if (this.state !== 0 || state === 0) return;
+    this.state = state;
+    this.value = value;
+    var _this = this;
+    Utils.runAsync(function () { _this.process() });
 };
 
 Prom.prototype.resolve = function (value) {
