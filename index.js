@@ -1,13 +1,14 @@
-var asyncRun = function (fn, data) {
-    if (data !== undefined) fn = function () { fn(data) };
+var isFn = function (fn) { return typeof fn === 'function' };
+
+var asyncRun = function (_fn, data) {
+    if (!isFn(_fn)) return;
+    var fn = function () { _fn(data) };
     if (typeof window !== 'undefined') {
         window.setTimeout(fn, 0);
     } else if (typeof process !== 'undefined') {
         process.nextTick(fn);
     }
 };
-
-var isFn = function (fn) { return typeof fn === 'function' };
 
 var Prom = function () {
     this.status = 0; // 0: pending, 1: resolved, 2: rejected
@@ -41,54 +42,38 @@ Prom.prototype.reject = function (reason) {
 
 Prom.prototype.then = function (resolver, rejecter) {
     var _this = this;
-    if (this.status === 1) {
-        var p = new Prom();
-        if (!isFn(resolver)) return p.resolve(this.data);
-        asyncRun(function () {
-            try {
-                var data = resolver(_this.data);
-                p.resolve(data);
-            } catch (e) {
-                p.reject(e);
-            }
-        });
-        return p;
-    } else if (this.status === 2) {
-        var p = new Prom();
-        if (!isFn(rejecter)) return p.reject(this.data);
-        asyncRun(function () {
-            try {
-                var data = rejecter(_this.data);
-                p.reject(data);
-            } catch (e) {
-                p.reject(e);
-            }
-        });
-        return p;
+    var p = new Prom();
+    p._resolver = resolver;
+    p._rejecter = rejecter;
+    if (this.status !== 0) {
+        p.resolve(this.data);
     } else {
-        var p = new Prom();
         var _resolver = this._resolver;
         var _rejecter = this._rejecter;
         this._resolver = function (value) {
-            _resolver && _resolver(value);
+            var data;
             try {
-                var data = isFn(resolver) ? resolver(value) : value;
-                p.resolve(data);
+                data = isFn(_resolver) ? _resolver(value) : value;
             } catch (e) {
                 p.reject(e);
+                return e;
             }
+            p.resolve(data);
+            return data;
         };
         this._rejecter = function (reason) {
-            _rejecter && _rejecter(reason);
+            var data;
             try {
-                var data = isFn(rejecter) ? rejecter(reason) : reason;
-                p.reject(data);
+                data = isFn(_rejecter) ? _rejecter(reason) : reason;
             } catch (e) {
                 p.reject(e);
+                return e;
             }
+            p.resolve(data);
+            return data;
         };
-        return p;
     }
+    return p;
 };
 
 Prom.prototype.catch = function (rejecter) {
