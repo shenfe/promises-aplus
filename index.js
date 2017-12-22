@@ -26,7 +26,8 @@ Prom.prototype.resolve = function (value) {
     if (!this.settle(1, value)) return;
     var _this = this;
     asyncRun(function () {
-        isFn(_this._resolver) && _this._resolver.call(undefined, _this.data);
+        isFn(_this._onResolved) && _this._onResolved.call(undefined, _this.data);
+        _this._onResolved = null;
     });
     return this;
 };
@@ -35,49 +36,71 @@ Prom.prototype.reject = function (reason) {
     if (!this.settle(2, reason)) return;
     var _this = this;
     asyncRun(function () {
-        isFn(_this._rejecter) && _this._rejecter.call(undefined, _this.data);
+        isFn(_this._onRejected) && _this._onRejected.call(undefined, _this.data);
+        _this._onRejected = null;
     });
     return this;
 };
 
-Prom.prototype.then = function (resolver, rejecter) {
+Prom.prototype.then = function (onResolved, onRejected) {
     var _this = this;
     var p = new Prom();
-    p._resolver = resolver;
-    p._rejecter = rejecter;
-    if (this.status !== 0) {
+    p._onResolved = onResolved;
+    p._onRejected = onRejected;
+    if (this.status !== 0 && this.data instanceof Prom) {
+        return this.data.then(onResolved, onRejected);
+    }
+    if (this.status === 1) {
         p.resolve(this.data);
+    } else if (this.status === 2) {
+        p.reject(this.data);
     } else {
-        var _resolver = this._resolver;
-        var _rejecter = this._rejecter;
-        this._resolver = function (value) {
-            var data;
-            try {
-                data = isFn(_resolver) ? _resolver(value) : value;
-            } catch (e) {
-                p.reject(e);
-                return e;
-            }
-            p.resolve(data);
-            return data;
-        };
-        this._rejecter = function (reason) {
-            var data;
-            try {
-                data = isFn(_rejecter) ? _rejecter(reason) : reason;
-            } catch (e) {
-                p.reject(e);
-                return e;
-            }
-            p.resolve(data);
-            return data;
-        };
+        var _onResolved = this._onResolved;
+        var _onRejected = this._onRejected;
+        asyncRun(function () {
+            _this._onResolved = function (data) {
+                try {
+                    data = isFn(_onResolved) ? _onResolved(data) : data;
+                } catch (e) {
+                    p.reject(e);
+                    return e;
+                }
+                if (data instanceof Prom) {
+                    data.then(function (value) {
+                        p.resolve(value);
+                    }, function (reason) {
+                        p.reject(reason);
+                    });
+                } else {
+                    p.resolve(data);
+                }
+                return data;
+            };
+            _this._onRejected = function (data) {
+                try {
+                    data = isFn(_onRejected) ? _onRejected(data) : data;
+                } catch (e) {
+                    p.reject(e);
+                    return e;
+                }
+                if (data instanceof Prom) {
+                    data.then(function (value) {
+                        p.resolve(value);
+                    }, function (reason) {
+                        p.reject(reason);
+                    });
+                } else {
+                    p.resolve(data);
+                }
+                return data;
+            };
+        });
     }
     return p;
 };
 
-Prom.prototype.catch = function (rejecter) {
-    return this.then(undefined, rejecter);
+Prom.prototype.catch = function (onRejected) {
+    return this.then(undefined, onRejected);
 };
 
 Prom.resolve = function (value) {
