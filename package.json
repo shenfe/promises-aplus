@@ -3,6 +3,7 @@
     "scripts": {
         "debug": "promises-aplus-tests ./adapter",
         "test": "promises-aplus-tests ./adapter",
+        "test2": "promises-aplus-tests ./adapter2",
         "test-adehun": "promises-aplus-tests ./adehun"
     },
     "devDependencies": {
