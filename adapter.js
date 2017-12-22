@@ -1,16 +1,25 @@
 let Prom = require('./index');
 
 module.exports = {
+    resolved: function (value) {
+        return new Prom(function (resolve) {
+            resolve(value);
+        });
+    },
+    rejected: function (reason) {
+        return new Prom(function (resolve, reject) {
+            reject(reason);
+        });
+    },
     deferred: function () {
-        let p = new Prom();
+        var resolve, reject;
         return {
-            promise: p,
-            resolve: function (value) {
-                p.resolve(value);
-            },
-            reject: function (reason) {
-                p.reject(reason);
-            }
+            promise: new Prom(function (rslv, rjct) {
+                resolve = rslv;
+                reject = rjct;
+            }),
+            resolve: resolve,
+            reject: reject
         };
     }
 };

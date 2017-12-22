@@ -1,10 +1,7 @@
 {
     "main": "./index.js",
     "scripts": {
-        "debug": "promises-aplus-tests ./adapter",
-        "test": "promises-aplus-tests ./adapter",
-        "test2": "promises-aplus-tests ./adapter2",
-        "test-adehun": "promises-aplus-tests ./adehun"
+        "test": "promises-aplus-tests ./adapter"
     },
     "devDependencies": {
         "promises-aplus-tests": "^2.1.2"
