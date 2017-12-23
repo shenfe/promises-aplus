@@ -6,7 +6,7 @@
 
 var Util = {
     doAsync: function (fn, arg, target) {
-        (typeof process === 'undefined' ? window.setTimeout : process.nextTick)(
+        (typeof process === 'undefined' ? setTimeout : process.nextTick)(
             function () { fn.apply(target, (arg instanceof Array) ? arg : [arg]) }
         );
     },
@@ -103,6 +103,8 @@ var Prom = function (fn) {
     }
 };
 
+/* Prototype methods */
+
 Prom.prototype.then = function (onFulfilled, onRejected) {
     var p = new Prom();
     p.callbacks[1] = Util.isFunction(onFulfilled) && onFulfilled;
@@ -128,12 +130,30 @@ Prom.prototype.reject = function (reason) {
     return this;
 };
 
-Prom.resolve = function (value) {
-    return new Prom().resolve(value);
+/* Static methods */
+
+Prom.resolved = Prom.resolve = function (value) {
+    return new Prom(function (resolve) {
+        resolve(value);
+    });
 };
 
-Prom.reject = function (reason) {
-    return new Prom().reject(reason);
+Prom.rejected = Prom.reject = function (reason) {
+    return new Prom(function (_, reject) {
+        reject(reason);
+    });
+};
+
+Prom.deferred = function () {
+    var _resolve, _reject;
+    return {
+        promise: new Prom(function (resolve, reject) {
+            _resolve = resolve;
+            _reject = reject;
+        }),
+        resolve: _resolve,
+        reject: _reject
+    };
 };
 
 module.exports = Prom;

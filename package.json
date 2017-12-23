@@ -1,7 +1,7 @@
 {
   "main": "./index.js",
   "scripts": {
-    "test": "promises-aplus-tests ./adapter"
+    "test": "promises-aplus-tests ./index"
   },
   "devDependencies": {
     "promises-aplus-tests": "^2.1.2"
