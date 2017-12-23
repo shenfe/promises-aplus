@@ -7,7 +7,7 @@
     "promises-aplus-tests": "^2.1.2"
   },
   "name": "lite-promise-aplus",
-  "description": "A lightweight implementation of Promise/A+.",
+  "description": "A lightweight implementation of Promises/A+.",
   "version": "1.1.0",
   "dependencies": {},
   "repository": {
@@ -16,7 +16,7 @@
   },
   "keywords": [
     "promise",
-    "promise-aplus"
+    "promises-aplus"
   ],
   "author": "hengwu",
   "license": "MIT",
