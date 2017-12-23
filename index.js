@@ -1,4 +1,4 @@
-var Utils = {
+var Util = {
     doAsync: function (fn, arg, target) {
         setTimeout(function () { fn.call(target, arg) }, 0);
     },
@@ -16,7 +16,7 @@ var Utils = {
 var Resolve = function (promise, x) {
     if (promise === x) {
         promise.reject(new TypeError('The promise and its value refer to the same object'));
-    } else if (Utils.isPromise(x)) {
+    } else if (Util.isPromise(x)) {
         if (x.state !== 0) {
             SettlePromise(promise, x.state, x.value);
         } else {
@@ -26,11 +26,11 @@ var Resolve = function (promise, x) {
                 promise.reject(reason);
             });
         }
-    } else if (Utils.isObject(x) || Utils.isFunction(x)) {
+    } else if (Util.isObject(x) || Util.isFunction(x)) {
         var called = false;
         try {
             var xthen = x.then;
-            if (Utils.isFunction(xthen)) {
+            if (Util.isFunction(xthen)) {
                 xthen.call(x,
                     function (y) {
                         if (called) return;
@@ -89,7 +89,7 @@ var SettlePromise = function (promise, state, value) {
     if (promise.state !== 0 || state === 0) return;
     promise.state = state;
     promise.value = value;
-    Utils.doAsync(RunQueueInPromise, promise);
+    Util.doAsync(RunQueueInPromise, promise);
 };
 
 var Prom = function (fn) {
@@ -111,21 +111,31 @@ var Prom = function (fn) {
 
 Prom.prototype.then = function (onFulfilled, onRejected) {
     var p = new Prom();
-    p._resolver = Utils.isFunction(onFulfilled) && onFulfilled;
-    p._rejecter = Utils.isFunction(onRejected) && onRejected;
+    p._resolver = Util.isFunction(onFulfilled) && onFulfilled;
+    p._rejecter = Util.isFunction(onRejected) && onRejected;
     this.queue.push(p);
 
-    if (this.state !== 0) Utils.doAsync(RunQueueInPromise, this);
+    if (this.state !== 0) Util.doAsync(RunQueueInPromise, this);
 
     return p;
 };
 
 Prom.prototype.resolve = function (value) {
     SettlePromise(this, 1, value);
+    return this;
 };
 
 Prom.prototype.reject = function (reason) {
     SettlePromise(this, 2, reason);
+    return this;
+};
+
+Prom.resolve = function (value) {
+    return new Prom().resolve(value);
+};
+
+Prom.reject = function (reason) {
+    return new Prom().reject(reason);
 };
 
 module.exports = Prom;
