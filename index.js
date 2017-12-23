@@ -1,103 +1,97 @@
+/**
+ * Promises/A+
+ * @link https://promisesaplus.com/
+ * @date 2017/12/23
+ */
+
 var Util = {
     doAsync: function (fn, arg, target) {
-        setTimeout(function () { fn.apply(target, (arg instanceof Array) ? arg : [arg]) }, 0);
+        (typeof process === 'undefined' ? window.setTimeout : process.nextTick)(
+            function () { fn.apply(target, (arg instanceof Array) ? arg : [arg]) }
+        );
     },
-    isFunction: function (v) {
-        return typeof v === 'function';
-    },
-    isObject: function (v) {
-        return typeof v === 'object' && v !== null;
-    },
-    isPromise: function (v) {
-        return v && v.constructor === Prom;
-    }
+    isFunction: function (v) { return typeof v === 'function' },
+    isObject:   function (v) { return typeof v === 'object' && v !== null },
+    isPromise:  function (v) { return v && v.constructor === Prom }
 };
 
 var Resolve = function (promise, x) {
-    if (promise === x) {
+    if (promise === x) { // 2.3.1
         promise.reject(new TypeError('The promise and its value refer to the same object.'));
-    } else if (Util.isPromise(x)) {
-        if (x.state !== 0) {
-            SettlePromise(promise, x.state, x.value);
-        } else {
+    } else if (Util.isPromise(x)) { // 2.3.2
+        if (x.state === 0) { // 2.3.2.1
             x.then(function (value) {
                 Resolve(promise, value);
             }, function (reason) {
                 promise.reject(reason);
             });
+        } else {
+            TransitionPromise(promise, x.state, x.value); // 2.3.2.2, 2.3.2.3
         }
-    } else if (Util.isObject(x) || Util.isFunction(x)) {
+    } else if (Util.isObject(x) || Util.isFunction(x)) { // 2.3.3
         var called = false;
         try {
-            var xthen = x.then;
-            if (Util.isFunction(xthen)) {
+            var xthen = x.then; // 2.3.3.1
+            if (Util.isFunction(xthen)) { // 2.3.3.3
                 xthen.call(x,
-                    function (y) {
-                        if (called) return;
+                    function (y) { // 2.3.3.3.1
+                        if (called) return; // 2.3.3.3.3
                         Resolve(promise, y);
                         called = true;
                     },
-                    function (r) {
-                        if (called) return;
+                    function (r) { // 2.3.3.3.2
+                        if (called) return; // 2.3.3.3.3
                         promise.reject(r);
                         called = true;
                     });
-            } else {
+            } else { // 2.3.3.4
                 promise.resolve(x);
                 called = true;
             }
-        } catch (e) {
+        } catch (e) { // 2.3.3.2, 2.3.3.3.4
             if (!called) {
                 promise.reject(e);
                 called = true;
             }
         }
-    } else {
+    } else { // 2.3.4
         promise.resolve(x);
     }
 };
 
-var RunQueueInPromise = function (promise) {
-    var p, value;
-    while (p = promise.queue.shift()) {
-        value = promise.value;
-        if (promise.state === 1 && p._resolver) {
-            try {
-                value = p._resolver.call(undefined, value);
-            } catch (e) {
-                p.reject(e);
-                continue;
-            }
-        } else if (promise.state === 2) {
-            if (!p._rejecter) {
-                p.reject(value);
-                continue;
-            }
-            try {
-                value = p._rejecter.call(undefined, value);
-            } catch (e) {
-                p.reject(e);
-                continue;
-            }
+var ThenPromise = function (promise2, promise1) {
+    if (promise1.state !== 0 && promise2.callbacks[promise1.state]) { // 2.2.2, 2.2.3
+        var value;
+        try {
+            value = promise2.callbacks[promise1.state].call(undefined, promise1.value); // 2.2.5
+        } catch (e) {
+            promise2.reject(e); // 2.2.7.2
+            return;
         }
-
-        Resolve(p, value);
+        Resolve(promise2, value); // 2.2.7.1
+    } else if (promise1.state === 1 && !promise2.callbacks[1]) { // 2.2.1.1
+        Resolve(promise2, promise1.value); // 2.2.7.3
+    } else if (promise1.state === 2 && !promise2.callbacks[2]) { // 2.2.1.2
+        promise2.reject(promise1.value); // 2.2.7.4
     }
 };
 
-var SettlePromise = function (promise, state, value) {
-    if (promise.state !== 0 || state === 0) return;
+var RunQueueInPromise = function (promise, queue) { // 2.2.6
+    while (queue.length) ThenPromise(queue.shift(), promise);
+};
+
+var TransitionPromise = function (promise, state, value) {
+    if (promise.state !== 0 || state === 0) return; // 2.1.1.1, 2.1.2.1, 2.1.3.1
     promise.state = state;
-    promise.value = value;
-    Util.doAsync(RunQueueInPromise, promise);
+    promise.value = value; // 2.1.2.2, 2.1.3.2
+    Util.doAsync(RunQueueInPromise, [promise, promise.queue]);
 };
 
 var Prom = function (fn) {
-    this.state = 0;
+    this.state = 0; // 0: pending, 1: fulfilled (resolved), 2: rejected
     this.value = null;
     this.queue = [];
-    this._resolver = null;
-    this._rejecter = null;
+    this.callbacks = {};
 
     if (fn) {
         var _this = this;
@@ -111,22 +105,26 @@ var Prom = function (fn) {
 
 Prom.prototype.then = function (onFulfilled, onRejected) {
     var p = new Prom();
-    p._resolver = Util.isFunction(onFulfilled) && onFulfilled;
-    p._rejecter = Util.isFunction(onRejected) && onRejected;
+    p.callbacks[1] = Util.isFunction(onFulfilled) && onFulfilled;
+    p.callbacks[2] = Util.isFunction(onRejected) && onRejected;
     this.queue.push(p);
 
-    if (this.state !== 0) Util.doAsync(RunQueueInPromise, this);
+    if (this.state !== 0) Util.doAsync(RunQueueInPromise, [this, this.queue]); // 2.2.4
 
     return p;
 };
 
+Prom.prototype['catch'] = function (onRejected) {
+    return this.then(undefined, onRejected);
+};
+
 Prom.prototype.resolve = function (value) {
-    SettlePromise(this, 1, value);
+    TransitionPromise(this, 1, value);
     return this;
 };
 
 Prom.prototype.reject = function (reason) {
-    SettlePromise(this, 2, reason);
+    TransitionPromise(this, 2, reason);
     return this;
 };
 
