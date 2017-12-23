@@ -1,27 +1,27 @@
 var Util = {
     doAsync: function (fn, arg, target) {
-        setTimeout(function () { fn.call(target, arg) }, 0);
+        setTimeout(function () { fn.apply(target, (arg instanceof Array) ? arg : [arg]) }, 0);
     },
-    isFunction: function (val) {
-        return typeof val === 'function';
+    isFunction: function (v) {
+        return typeof v === 'function';
     },
-    isObject: function (val) {
-        return typeof val === 'object' && val !== null;
+    isObject: function (v) {
+        return typeof v === 'object' && v !== null;
     },
-    isPromise: function (val) {
-        return val && val.constructor === Prom;
+    isPromise: function (v) {
+        return v && v.constructor === Prom;
     }
 };
 
 var Resolve = function (promise, x) {
     if (promise === x) {
-        promise.reject(new TypeError('The promise and its value refer to the same object'));
+        promise.reject(new TypeError('The promise and its value refer to the same object.'));
     } else if (Util.isPromise(x)) {
         if (x.state !== 0) {
             SettlePromise(promise, x.state, x.value);
         } else {
-            x.then(function (val) {
-                Resolve(promise, val);
+            x.then(function (value) {
+                Resolve(promise, value);
             }, function (reason) {
                 promise.reject(reason);
             });
