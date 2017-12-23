@@ -7,24 +7,22 @@
 var Util = {
     doAsync: function (fn, arg, target) {
         (typeof process === 'undefined' ? setTimeout : process.nextTick)(
-            function () { fn.apply(target, (arg instanceof Array) ? arg : [arg]) }
-        );
+            arguments.length === 1 ? fn : function () { fn.apply(target, (arg instanceof Array) ? arg : [arg]) }
+        )
     },
     isFunction: function (v) { return typeof v === 'function' },
-    isObject:   function (v) { return typeof v === 'object' && v !== null },
-    isPromise:  function (v) { return v && v.constructor === Prom }
+    isObject: function (v) { return typeof v === 'object' && v !== null }
 };
 
 var Resolve = function (promise, x) {
     if (promise === x) { // 2.3.1
         promise.reject(new TypeError('The promise and its value refer to the same object.'));
-    } else if (Util.isPromise(x)) { // 2.3.2
+    } else if (x && x.constructor === Prom) { // 2.3.2
         if (x.state === 0) { // 2.3.2.1
-            x.then(function (value) {
-                Resolve(promise, value);
-            }, function (reason) {
-                promise.reject(reason);
-            });
+            x.then(
+                function (value) { Resolve(promise, value) },
+                function (reason) { promise.reject(reason) }
+            );
         } else {
             TransitionPromise(promise, x.state, x.value); // 2.3.2.2, 2.3.2.3
         }
@@ -45,7 +43,7 @@ var Resolve = function (promise, x) {
                         called = true;
                     });
             } else { // 2.3.3.4
-                promise.resolve(x);
+                TransitionPromise(promise, 1, x);
                 called = true;
             }
         } catch (e) { // 2.3.3.2, 2.3.3.3.4
@@ -55,51 +53,48 @@ var Resolve = function (promise, x) {
             }
         }
     } else { // 2.3.4
-        promise.resolve(x);
+        TransitionPromise(promise, 1, x);
     }
 };
 
-var ThenPromise = function (promise2, promise1) {
-    if (promise1.state !== 0 && promise2.callbacks[promise1.state]) { // 2.2.2, 2.2.3
+var ThenPromise = function (promise2, promise1state, promise1value) {
+    if (promise1state !== 0 && promise2.callbacks[promise1state]) { // 2.2.2, 2.2.3
         var value;
         try {
-            value = promise2.callbacks[promise1.state].call(undefined, promise1.value); // 2.2.5
+            value = promise2.callbacks[promise1state].call(undefined, promise1value); // 2.2.5
         } catch (e) {
             promise2.reject(e); // 2.2.7.2
             return;
         }
         Resolve(promise2, value); // 2.2.7.1
-    } else if (promise1.state === 1 && !promise2.callbacks[1]) { // 2.2.1.1
-        Resolve(promise2, promise1.value); // 2.2.7.3
-    } else if (promise1.state === 2 && !promise2.callbacks[2]) { // 2.2.1.2
-        promise2.reject(promise1.value); // 2.2.7.4
+    } else if (promise1state === 1 && !promise2.callbacks[1]) { // 2.2.1.1
+        Resolve(promise2, promise1value); // 2.2.7.3
+    } else if (promise1state === 2 && !promise2.callbacks[2]) { // 2.2.1.2
+        promise2.reject(promise1value); // 2.2.7.4
     }
-};
-
-var RunQueueInPromise = function (promise, queue) { // 2.2.6
-    while (queue.length) ThenPromise(queue.shift(), promise);
 };
 
 var TransitionPromise = function (promise, state, value) {
     if (promise.state !== 0 || state === 0) return; // 2.1.1.1, 2.1.2.1, 2.1.3.1
     promise.state = state;
     promise.value = value; // 2.1.2.2, 2.1.3.2
-    Util.doAsync(RunQueueInPromise, [promise, promise.queue]);
+    Util.doAsync(function () { // 2.2.6
+        while (promise.queue.length) ThenPromise(promise.queue.shift(), promise.state, promise.value);
+    });
 };
 
-var Prom = function (fn) {
+var Prom = function (executor) {
     this.state = 0; // 0: pending, 1: fulfilled (resolved), 2: rejected
     this.value = null;
     this.queue = [];
     this.callbacks = {};
 
-    if (fn) {
+    if (executor) {
         var _this = this;
-        fn(function (value) {
-            Resolve(_this, value);
-        }, function (reason) {
-            _this.reject(reason);
-        });
+        executor(
+            function (value) { Resolve(_this, value) },
+            function (reason) { _this.reject(reason) }
+        );
     }
 };
 
@@ -109,9 +104,9 @@ Prom.prototype.then = function (onFulfilled, onRejected) {
     var p = new Prom();
     p.callbacks[1] = Util.isFunction(onFulfilled) && onFulfilled;
     p.callbacks[2] = Util.isFunction(onRejected) && onRejected;
-    this.queue.push(p);
 
-    if (this.state !== 0) Util.doAsync(RunQueueInPromise, [this, this.queue]); // 2.2.4
+    if (this.state === 0) this.queue.push(p);
+    else Util.doAsync(ThenPromise, [p, this.state, this.value]); // 2.2.4
 
     return p;
 };
@@ -121,7 +116,7 @@ Prom.prototype['catch'] = function (onRejected) {
 };
 
 Prom.prototype.resolve = function (value) {
-    TransitionPromise(this, 1, value);
+    Resolve(this, value);
     return this;
 };
 
