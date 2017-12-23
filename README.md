@@ -5,7 +5,7 @@
          title="Promises/A+ 1.0 compliant" align="right" />
 </a>
 
-A lightweight implementation of Promise/A+.
+A lightweight implementation of Promises/A+.
 
 ## Guide
 
