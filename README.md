@@ -6,3 +6,14 @@
 </a>
 
 A lightweight implementation of Promise/A+.
+
+## Guide
+
+```bash
+npm install --save-dev lite-promise-aplus
+```
+
+## License
+
+MIT
+

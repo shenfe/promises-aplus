@@ -6,8 +6,8 @@
   "devDependencies": {
     "promises-aplus-tests": "^2.1.2"
   },
-  "name": "lite-promise",
-  "description": "<a href=\"https://promisesaplus.com/\">\r     <img src=\"https://promisesaplus.com/assets/logo-small.png\" alt=\"Promises/A+ logo\"\r          title=\"Promises/A+ 1.0 compliant\" align=\"right\" />\r </a>",
+  "name": "lite-promise-aplus",
+  "description": "A lightweight implementation of Promise/A+.",
   "version": "1.0.0",
   "dependencies": {},
   "repository": {
