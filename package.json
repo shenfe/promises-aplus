@@ -6,22 +6,23 @@
   "devDependencies": {
     "promises-aplus-tests": "^2.1.2"
   },
-  "name": "lite-promise-aplus",
-  "description": "A lightweight implementation of Promise/A+.",
-  "version": "1.1.0",
+  "name": "promises-aplus",
+  "description": "A lightweight implementation of Promises/A+.",
+  "version": "1.0.0",
   "dependencies": {},
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/shenfe/lite-promise.git"
+    "url": "git+https://github.com/shenfe/promises-aplus.git"
   },
   "keywords": [
     "promise",
-    "promise-aplus"
+    "promise-api",
+    "promises-aplus"
   ],
   "author": "hengwu",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/shenfe/lite-promise/issues"
+    "url": "https://github.com/shenfe/promises-aplus/issues"
   },
-  "homepage": "https://github.com/shenfe/lite-promise#readme"
+  "homepage": "https://github.com/shenfe/promises-aplus#readme"
 }
