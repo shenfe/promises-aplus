@@ -10,7 +10,7 @@ A lightweight implementation of [Promises/A+](https://promisesaplus.com/).
 ## Guide
 
 ```bash
-npm install --save-dev promises-aplus
+npm install --save promises-aplus
 ```
 
 ## License
