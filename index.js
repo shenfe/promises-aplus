@@ -1,6 +1,6 @@
 var Utils = {
-    runAsync: function (fn) {
-        setTimeout(fn, 0);
+    doAsync: function (fn, arg, target) {
+        setTimeout(function () { fn.call(target, arg) }, 0);
     },
     isFunction: function (val) {
         return typeof val === 'function';
@@ -15,34 +15,32 @@ var Utils = {
 
 var Resolve = function (promise, x) {
     if (promise === x) {
-        promise.settle(2, new TypeError('The promise and its value refer to the same object'));
+        promise.reject(new TypeError('The promise and its value refer to the same object'));
     } else if (Utils.isPromise(x)) {
-        if (x.state === 0) {
+        if (x.state !== 0) {
+            SettlePromise(promise, x.state, x.value);
+        } else {
             x.then(function (val) {
                 Resolve(promise, val);
             }, function (reason) {
-                promise.settle(2, reason);
+                promise.reject(reason);
             });
-        } else {
-            promise.settle(x.state, x.value);
         }
     } else if (Utils.isObject(x) || Utils.isFunction(x)) {
         var called = false;
         try {
-            var thenHandler = x.then;
-            if (Utils.isFunction(thenHandler)) {
-                thenHandler.call(x,
+            var xthen = x.then;
+            if (Utils.isFunction(xthen)) {
+                xthen.call(x,
                     function (y) {
-                        if (!called) {
-                            Resolve(promise, y);
-                            called = true;
-                        }
+                        if (called) return;
+                        Resolve(promise, y);
+                        called = true;
                     },
                     function (r) {
-                        if (!called) {
-                            promise.reject(r);
-                            called = true;
-                        }
+                        if (called) return;
+                        promise.reject(r);
+                        called = true;
                     });
             } else {
                 promise.resolve(x);
@@ -56,45 +54,29 @@ var Resolve = function (promise, x) {
         }
     } else {
         promise.resolve(x);
-    }   
-};
-
-var Prom = function (fn) {
-    this.state = 0;
-    this.value = null;
-    this.queue = [];
-    this._resolve = null;
-    this._reject = null;
-
-    var _this = this;
-    if (fn) {
-        fn(function (value) {
-            Resolve(_this, value);
-        }, function (reason) {
-            _this.reject(reason);
-        });
     }
 };
 
-Prom.prototype.process = function (p, value) {
-    while (p = this.queue.shift()) {
-        value = this.value;
-        if (this.state === 1 && p._resolve) {
+var RunQueueInPromise = function (promise) {
+    var p, value;
+    while (p = promise.queue.shift()) {
+        value = promise.value;
+        if (promise.state === 1 && p._resolver) {
             try {
-                value = p._resolve.call(undefined, value);
+                value = p._resolver.call(undefined, value);
             } catch (e) {
-                p.settle(2, e);
+                p.reject(e);
                 continue;
             }
-        } else if (this.state === 2) {
-            if (!p._reject) {
-                p.settle(2, value);
+        } else if (promise.state === 2) {
+            if (!p._rejecter) {
+                p.reject(value);
                 continue;
             }
             try {
-                value = p._reject.call(undefined, value);
+                value = p._rejecter.call(undefined, value);
             } catch (e) {
-                p.settle(2, e);
+                p.reject(e);
                 continue;
             }
         }
@@ -103,32 +85,47 @@ Prom.prototype.process = function (p, value) {
     }
 };
 
+var SettlePromise = function (promise, state, value) {
+    if (promise.state !== 0 || state === 0) return;
+    promise.state = state;
+    promise.value = value;
+    Utils.doAsync(RunQueueInPromise, promise);
+};
+
+var Prom = function (fn) {
+    this.state = 0;
+    this.value = null;
+    this.queue = [];
+    this._resolver = null;
+    this._rejecter = null;
+
+    if (fn) {
+        var _this = this;
+        fn(function (value) {
+            Resolve(_this, value);
+        }, function (reason) {
+            _this.reject(reason);
+        });
+    }
+};
+
 Prom.prototype.then = function (onFulfilled, onRejected) {
     var p = new Prom();
-    p._resolve = Utils.isFunction(onFulfilled) && onFulfilled;
-    p._reject = Utils.isFunction(onRejected) && onRejected;
+    p._resolver = Utils.isFunction(onFulfilled) && onFulfilled;
+    p._rejecter = Utils.isFunction(onRejected) && onRejected;
     this.queue.push(p);
 
-    var _this = this;
-    if (this.state !== 0) Utils.runAsync(function () { _this.process() });
+    if (this.state !== 0) Utils.doAsync(RunQueueInPromise, this);
 
     return p;
 };
 
-Prom.prototype.settle = function (state, value) {
-    if (this.state !== 0 || state === 0) return;
-    this.state = state;
-    this.value = value;
-    var _this = this;
-    Utils.runAsync(function () { _this.process() });
-};
-
 Prom.prototype.resolve = function (value) {
-    this.settle(1, value);
+    SettlePromise(this, 1, value);
 };
 
 Prom.prototype.reject = function (reason) {
-    this.settle(2, reason);
+    SettlePromise(this, 2, reason);
 };
 
 module.exports = Prom;
