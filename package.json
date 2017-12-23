@@ -1,9 +1,27 @@
 {
-    "main": "./index.js",
-    "scripts": {
-        "test": "promises-aplus-tests ./adapter"
-    },
-    "devDependencies": {
-        "promises-aplus-tests": "^2.1.2"
-    }
+  "main": "./index.js",
+  "scripts": {
+    "test": "promises-aplus-tests ./adapter"
+  },
+  "devDependencies": {
+    "promises-aplus-tests": "^2.1.2"
+  },
+  "name": "lite-promise",
+  "description": "<a href=\"https://promisesaplus.com/\">\r     <img src=\"https://promisesaplus.com/assets/logo-small.png\" alt=\"Promises/A+ logo\"\r          title=\"Promises/A+ 1.0 compliant\" align=\"right\" />\r </a>",
+  "version": "1.0.0",
+  "dependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shenfe/lite-promise.git"
+  },
+  "keywords": [
+    "promise",
+    "promise-aplus"
+  ],
+  "author": "hengwu",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/shenfe/lite-promise/issues"
+  },
+  "homepage": "https://github.com/shenfe/lite-promise#readme"
 }
