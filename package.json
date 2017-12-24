@@ -8,7 +8,7 @@
   },
   "name": "@hengwu/promises-aplus",
   "description": "A lightweight implementation of Promises/A+.",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "dependencies": {},
   "repository": {
     "type": "git",

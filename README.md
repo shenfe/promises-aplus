@@ -13,6 +13,25 @@ A lightweight (< 100 LOC in main program) implementation of [Promises/A+](https:
 npm install --save @hengwu/promises-aplus
 ```
 
+## Implementation
+
+### Prototype Methods
+
+* then
+* catch
+* done
+* finally
+* resolve
+* reject
+
+### Static Methods
+
+* resolve, resolved
+* reject, rejected
+* deferred
+* all
+* race
+
 ## License
 
 MIT
