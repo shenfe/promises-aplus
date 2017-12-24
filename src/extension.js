@@ -50,4 +50,28 @@ module.exports = function (Prom) {
             reject: _reject
         };
     };
+
+    Prom.all = function (arr) {
+        var ps = Array.prototype.slice.call(arr);
+        return new Prom(function (resolve, reject) {
+            if (ps.length === 0) return resolve([]);
+            var total = ps.length, remain = ps.length;
+            for (var i = 0; i < total; i++) {
+                Prom.resolved(ps[i]).then(function (value) {
+                    ps[i] = value;
+                    remain--;
+                    if (remain === 0) resolve(ps);
+                }, reject);
+            }
+        });
+    };
+
+    Prom.race = function (arr) {
+        var ps = Array.prototype.slice.call(arr);
+        return new Prom(function (resolve, reject) {
+            if (ps.length === 0) return resolve(null);
+            for (var i = 0, total = ps.length; i < total; i++)
+                Prom.resolve(ps[i]).then(resolve, reject);
+        });
+    };
 };
