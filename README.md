@@ -5,7 +5,7 @@
          title="Promises/A+ 1.0 compliant" align="right" />
 </a>
 
-A lightweight implementation of [Promises/A+](https://promisesaplus.com/).
+A lightweight (< 100 LOC in main program) implementation of [Promises/A+](https://promisesaplus.com/) (indexed on 2017/12/23).
 
 ## Guide
 
