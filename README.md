@@ -32,6 +32,12 @@ npm install --save @hengwu/promises-aplus
 * all
 * race
 
+## References
+
+* [https://promisesaplus.com/](https://promisesaplus.com/)
+* [https://www.promisejs.org/api/](https://www.promisejs.org/api/)
+* [https://github.com/abdulapopoola/Adehun](https://github.com/abdulapopoola/Adehun)
+
 ## License
 
 [MIT](http://opensource.org/licenses/MIT)
