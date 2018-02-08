@@ -32,6 +32,14 @@ npm install --save @hengwu/promises-aplus
 * all
 * race
 
+## Test
+
+```bash
+npm run test
+```
+
+The test suite is provided by [promises-aplus/promises-tests](https://github.com/promises-aplus/promises-tests).
+
 ## References
 
 * [https://promisesaplus.com/](https://promisesaplus.com/)
