@@ -69,9 +69,20 @@ module.exports = function (Prom) {
     Prom.race = function (arr) {
         var ps = Array.prototype.slice.call(arr);
         return new Prom(function (resolve, reject) {
-            if (ps.length === 0) return resolve(null);
+            var once = false;
+            var resolver = function (value) {
+                if (once) return;
+                once = true;
+                if (resolve) return resolve(value);
+            };
+            var rejecter = function (reason) {
+                if (once) return;
+                once = true;
+                if (reject) return reject(reason);
+            };
+            if (ps.length === 0) return resolver(null);
             for (var i = 0, total = ps.length; i < total; i++)
-                Prom.resolve(ps[i]).then(resolve, reject);
+                Prom.resolved(ps[i]).then(resolver, rejecter);
         });
     };
 };
