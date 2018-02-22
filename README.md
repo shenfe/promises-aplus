@@ -10,7 +10,7 @@ A lightweight (< 100 LOC in main program) implementation of [Promises/A+](https:
 ## Guide
 
 ```bash
-npm install --save @hengwu/promises-aplus
+$ npm install --save @hengwu/promises-aplus
 ```
 
 ## Implementation
@@ -35,7 +35,7 @@ npm install --save @hengwu/promises-aplus
 ## Test
 
 ```bash
-npm run test
+$ npm run test
 ```
 
 The test suite is provided by [promises-aplus/promises-tests](https://github.com/promises-aplus/promises-tests).
