@@ -50,4 +50,4 @@ The test suite is provided by [promises-aplus/promises-tests](https://github.com
 
 [MIT](http://opensource.org/licenses/MIT)
 
-Copyright (c) 2017-present, [shenfe](https://github.com/shenfe)
+Copyright © 2017-present, [shenfe](https://github.com/shenfe)
